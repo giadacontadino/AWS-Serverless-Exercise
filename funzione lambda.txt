@@ -1,0 +1,43 @@
+import json
+import boto3
+
+dynamoDB = boto3.resource('dynamodb', region_name='eu-central-1')
+table = dynamoDB.Table('Tabella-Serveless-Exercise')
+
+def lambda_handler(event, context):
+    try:
+        print('event:', event)
+
+        records = event['Records']
+
+        body = records[0]['body']
+
+        try:
+            body = json.loads(body)
+        except json.JSONDecodeError:
+            pass
+
+        print("Incoming message body from SQS :", body)
+
+        if isinstance(body, dict):
+            message_id = body.get('messageId', '')
+            message_content = body.get('message', '')
+        else:
+            message_id = ''
+            message_content = body
+
+        params = {
+            'TableName': 'Tabella-Serveless-Exercise',
+            'Item': {
+                'message': message_content,
+            }
+        }
+
+        table.put_item(Item=params['Item'])
+
+        print('Successfully written to DynamoDB')
+        return {"statusCode": 200, "messageId": message_id, "message": "Successfully written to DynamoDB"}
+ 
+    except Exception as e:
+        print('Error in executing lambda:', str(e))
+        return {"statusCode": 500, "message": "Error while execution: " + str(e)}

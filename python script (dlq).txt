@@ -1,0 +1,37 @@
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+
+sqs = boto3.client('sqs', region_name='eu-central-1')
+
+main_queue_url = 'https://sqs.eu-central-1.amazonaws.com/339712995867/AWS-Serveless-Exercise'
+
+dlq_url = 'https://sqs.eu-central-1.amazonaws.com/339712995867/dead_letter_queue'
+
+def send_message_to_sqs(message_body):
+    try:
+        if "condizione_di_errore" in message_body:
+            raise ValueError("Errore simulato")
+
+        response = sqs.send_message(
+            QueueUrl=main_queue_url,
+            MessageBody=message_body
+        )
+        print("Messaggio inviato con successo:", response)
+
+    except (BotoCoreError, ClientError, ValueError) as e:
+        send_to_dlq(message_body)
+        print("Errore durante l'invio del messaggio:", str(e))
+
+def send_to_dlq(message_body):
+    try:
+        response = sqs.send_message(
+            QueueUrl=dlq_url,
+            MessageBody=message_body
+        )
+        print("Messaggio inviato alla DLQ:", response)
+
+    except (BotoCoreError, ClientError) as e:
+        print("Errore durante l'invio del messaggio alla DLQ:", str(e))
+
+message_to_send = '{"message": "Hello", "condizione_di_errore": true}'
+send_message_to_sqs(message_to_send)
